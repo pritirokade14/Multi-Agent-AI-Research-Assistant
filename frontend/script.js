@@ -1,4 +1,4 @@
-const API_BASE_URL = "https://ai-research-assistance.onrender.com";
+const API_BASE_URL = ""; // Empty string means it uses the current domain automatically
 const POLL_INTERVAL = 1500;
 
 const state = {
@@ -7,7 +7,6 @@ const state = {
   running: false,
   lastResult: null
 };
-
 const $ = (id) => document.getElementById(id);
 
 const topicInput = $("topicInput");
