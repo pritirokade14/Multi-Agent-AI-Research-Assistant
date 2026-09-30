@@ -36,8 +36,7 @@ def read_root():
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://ai-research-assistance-1.onrender.com",
-        "https://ai-research-assistance.onrender.com",
+        "https://multi-agent-ai-research-assistant-8sfh.onrender.com",
         "http://127.0.0.1:8000",
         "http://localhost:8000",
         "http://127.0.0.1:5500",
@@ -47,8 +46,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 # ============================================================
 # In-memory job storage
 # ============================================================
