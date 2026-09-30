@@ -1,5 +1,7 @@
 from fastapi import FastAPI, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 from typing import Any, Dict, Optional
 from uuid import uuid4
@@ -7,15 +9,10 @@ from datetime import datetime, timezone
 import traceback
 import threading
 
-from fastapi import FastAPI
-from fastapi.responses import FileResponse
-from fastapi.staticfiles import StaticFiles
-
 from pipeline import run_research_pipeline
 
-
 # ============================================================
-# FastAPI application
+# FastAPI application & Static File Configuration
 # ============================================================
 
 app = FastAPI(
@@ -24,12 +21,17 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Mount the frontend folder so CSS and JS load properly
+app.mount("/static", StaticFiles(directory="frontend"), name="static")
+
+@app.get("/")
+def read_root():
+    return FileResponse("frontend/index.html")
+
 
 # ============================================================
 # CORS
 # ============================================================
-
-from fastapi.middleware.cors import CORSMiddleware
 
 app.add_middleware(
     CORSMiddleware,
@@ -38,7 +40,7 @@ app.add_middleware(
         "https://ai-research-assistance.onrender.com",
         "http://127.0.0.1:8000",
         "http://localhost:8000",
-        "http://127.0.0.1:5500", # Add if using VS Code Live Server
+        "http://127.0.0.1:5500",
         "http://localhost:5500"
     ],
     allow_credentials=True,
@@ -83,10 +85,6 @@ def now_iso() -> str:
 
 
 def make_json_safe(value: Any) -> Any:
-    """
-    Convert LangChain message objects and other values into
-    JSON-safe values for the API response.
-    """
     if value is None:
         return None
 
@@ -102,7 +100,6 @@ def make_json_safe(value: Any) -> Any:
     if isinstance(value, list):
         return [make_json_safe(item) for item in value]
 
-    # LangChain AIMessage / HumanMessage usually exposes .content
     if hasattr(value, "content"):
         return make_json_safe(value.content)
 
@@ -130,14 +127,6 @@ def _run_research_job(job_id: str, topic: str) -> None:
             message="Starting the multi-agent research pipeline...",
         )
 
-        # ----------------------------------------------------
-        # Your current pipeline.py has:
-        #
-        # def run_research_pipeline(topic: str) -> dict:
-        #
-        # Therefore we intentionally call it with ONLY topic.
-        # This avoids the progress_callback error you were getting.
-        # ----------------------------------------------------
         update_job(
             job_id,
             progress=15,
@@ -146,11 +135,6 @@ def _run_research_job(job_id: str, topic: str) -> None:
         )
 
         result = run_research_pipeline(topic)
-
-        # The current pipeline runs Search -> Reader -> Writer -> Critic
-        # internally. Since the uploaded pipeline.py does not expose a
-        # progress callback, we mark the job as processing while it runs
-        # and provide the completed result afterward.
 
         update_job(
             job_id,
@@ -184,15 +168,6 @@ def _run_research_job(job_id: str, topic: str) -> None:
 # ============================================================
 # Routes
 # ============================================================
-
-@app.get("/")
-def root():
-    return {
-        "message": "AI Research Assistant API is running",
-        "docs": "/docs",
-        "health": "/api/health",
-    }
-
 
 @app.get("/api/health")
 def health():
@@ -315,10 +290,6 @@ def research_result(job_id: str):
 
 @app.get("/api/research")
 def list_research_jobs():
-    """
-    Returns recent in-memory research jobs.
-    Useful for the frontend Recent Research section.
-    """
     with jobs_lock:
         items = list(jobs.values())
 
